@@ -10,14 +10,14 @@ BLEScan* pBLEScan;
 std::string esp32Address;
 
 // WiFi
-const char *ssid = "TROJAN.EXE";
-const char *password = "26131011";
+const char *ssid = "NETWORK_NAME";
+const char *password = "PASSWORD";
 
 // MQTT Broker
 const char *mqtt_broker = "broker.emqx.io";
 const char *topic = "emqx/esp32";
-const char *mqtt_username = "gustavo";
-const char *mqtt_password = "senha123";
+const char *mqtt_username = "user_name";
+const char *mqtt_password = "user_password";
 const int mqtt_port = 1883;
 
 WiFiClient espClient;
