@@ -10,20 +10,21 @@ BLEScan* pBLEScan;
 std::string esp32Address;
 
 // WiFi
-const char *ssid = "NETWORK_NAME";
-const char *password = "PASSWORD";
+const char *ssid = "REDE-WIFI";
+const char *password = "SENHA-WIFI";
 
 // MQTT Broker
 const char *mqtt_broker = "broker.emqx.io";
-const char *topic = "emqx/esp32";
-const char *mqtt_username = "user_name";
-const char *mqtt_password = "user_password";
+const char *topic = "topico";
+const char *mqtt_username = "usuario";
+const char *mqtt_password = "senha";
 const int mqtt_port = 1883;
+
+int rssi_ref = -77; // RSSI de referência para 1 metro de distância
+double N = 1.5; // Exponente de atenuação do sinal
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-int total = 0;
-int qtd = 0;
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -35,6 +36,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
         int rssi = advertisedDevice.getRSSI();
         double distance = calculateDistance(rssi);
+        int expected_rssi = calculateRSSI(distance);
 
         String message = "Dispositivo encontrado: ";
         message += advertisedDevice.toString().c_str();
@@ -43,30 +45,24 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         message += "\nDistância estimada: ";
         message += String(distance);
         message += " metros\n";
-
-        total+= rssi;
-        qtd++;
-        message += "Média: ";
-        message += (total/qtd);
-        message += "\n\n";
+        message += "RSSI esperado para (d): ";
+        message += String(expected_rssi);
 
         client.publish(topic, message.c_str());
     }
 
     double calculateDistance(int rssi) {
-        int txPower = -80;
-
         if (rssi == 0) {
-            return -1.0;
+            return -1.0; // Valor inválido
         }
 
-        double ratio = rssi * 1.0 / txPower;
-        if (ratio < 1.0) {
-            return pow(ratio, 10);
-        } else {
-            double distance = (0.89976) * pow(ratio, 7.7095) + 0.111;
-            return distance;
-        }
+        double distance = pow(10, ((rssi_ref - rssi) / (10.0 * N)));
+        return distance;
+    }
+
+    int calculateRSSI(double distance) {
+        int expected_rssi = rssi_ref - (10 * N * log10(distance));
+        return expected_rssi;
     }
 };
 
