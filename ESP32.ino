@@ -11,23 +11,28 @@
 // BLE and WiFi settings
 BLEScan* pBLEScan;
 std::string esp32Address;
-const char *ssid = "NOME_DA_REDE";
-const char *password = "SENHA_DA_REDE";
+const char *ssid = "SSID_NETWORK";
+const char *password = "PASSWORD_NETWORK";
 
 // MQTT Broker settings
 const char *mqtt_broker = "broker.emqx.io";
+const char *topic_n_value = "emqx/nvalue";
+
 const char *topic_device_info = "emqx/info";
 const char *topic_device_extra = "emqx/extra";
 const char *topic_device_quantity = "emqx/qtd";
 const char *topic_device_filter = "emqx/device";
-const char *mqtt_username = "NOME_USUARIO";
-const char *mqtt_password = "SENHA_USUARIO";
+const char *topic_broker_ip = "emqx/brokerip";
+const char *topic_esp_ip = "emqx/espip";
+
+const char *mqtt_username = "gustavo";
+const char *mqtt_password = "senha123";
 const int mqtt_port = 1883;
 
 // RSSI settings
 int rssi_ref = -69; // RSSI de referência para 1 metro de distância
-double N = 3; // Exponente de atenuação do sinal
-const int BUFFER_SIZE = 10; // Tamanho máximo do buffer de RSSI
+double N = 2; // Exponente de atenuação do sinal
+const int BUFFER_SIZE = 5; // Tamanho máximo do buffer de RSSI
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -56,7 +61,7 @@ public:
             return 0;
         }
         
-        float sum = 0; // Usar float para evitar overflow
+        float sum = 0;
         Serial.print("Buffer de RSSI (tamanho ");
         Serial.print(rssiBuffer.size());
         Serial.println("):");
@@ -142,6 +147,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         filterAddress = message.c_str();
         Serial.print("Filtro atualizado para: ");
         Serial.println(filterAddress.c_str());
+    } else if (String(topic) == topic_n_value) {
+        N = message.toDouble();
+        Serial.print("N alterado para: ");
+        Serial.println(N);
     }
 }
 
@@ -170,6 +179,7 @@ void setup() {
         String client_id = "esp32-client-" + WiFi.macAddress();
         if (client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
             client.subscribe(topic_device_filter);
+            client.subscribe(topic_n_value);
         } else {
             delay(2000);
         }
@@ -188,4 +198,10 @@ void loop() {
     int numDevices = foundDevices.getCount();
     String message = String(numDevices) + " dispositivo(s)";
     client.publish(topic_device_quantity, message.c_str());
+
+    String espIp = WiFi.localIP().toString();
+    client.publish(topic_esp_ip, espIp.c_str());
+
+    String brokerIp = mqtt_broker;
+    client.publish(topic_broker_ip, brokerIp.c_str());
 }
