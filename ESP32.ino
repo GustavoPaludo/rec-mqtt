@@ -61,25 +61,12 @@ public:
             return 0;
         }
         
-        float sum = 0;
-        Serial.print("Buffer de RSSI (tamanho ");
-        Serial.print(rssiBuffer.size());
-        Serial.println("):");
-
+        float sum = 0; // Usar float para evitar overflow
         for (int i = 0; i < rssiBuffer.size(); ++i) {
-            Serial.print(rssiBuffer[i]);
-            Serial.print(" ");
             sum += rssiBuffer[i];
         }
-        Serial.println();
-
-        float average = sum / rssiBuffer.size();
-        Serial.print("Soma dos RSSI: ");
-        Serial.println(sum);
-        Serial.print("Média dos RSSI: ");
-        Serial.println(average);
         
-        return average;
+        return sum / rssiBuffer.size();
     }
 
     void printRSSIBuffer() {
@@ -97,8 +84,7 @@ public:
         if (rssi == 0) {
             return -1.0;
         }
-        double distance = pow(10, ((rssi_ref - rssi) / (10.0 * N)));
-        return distance;
+        return pow(10, ((rssi_ref - rssi) / (10.0 * N)));
     }
 };
 
@@ -107,7 +93,7 @@ std::map<std::string, DeviceData> deviceMap;
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
         int rssi = advertisedDevice.getRSSI();
-        std::string address = advertisedDevice.getAddress().toString();
+        std::string address = advertisedDevice.getAddress().toString().c_str();
 
         if (deviceMap.find(address) == deviceMap.end()) {
             deviceMap[address] = DeviceData(address);
@@ -165,7 +151,7 @@ void setup() {
     pBLEScan->setInterval(100);
     pBLEScan->setWindow(99);
 
-    esp32Address = BLEDevice::getAddress().toString();
+    esp32Address = BLEDevice::getAddress().toString().c_str();
 
     WiFi.begin(ssid, password);
     while (WiFi.status() != WL_CONNECTED) {
@@ -190,12 +176,12 @@ void setup() {
 void loop() {
     client.loop();
 
-    BLEScanResults foundDevices = pBLEScan->start(5, false);
+    BLEScanResults* foundDevices = pBLEScan->start(5, false);
     Serial.println("\nEscaneamento concluído");
     pBLEScan->clearResults();
     delay(2000);
 
-    int numDevices = foundDevices.getCount();
+    int numDevices = foundDevices->getCount();
     String message = String(numDevices) + " dispositivo(s)";
     client.publish(topic_device_quantity, message.c_str());
 
